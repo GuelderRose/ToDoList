@@ -1,6 +1,8 @@
 #ifndef TASKCREATORDIALOG_H
 #define TASKCREATORDIALOG_H
 
+#include "task.h"
+
 #include <QCalendarWidget>
 #include <QComboBox>
 #include <QDialog>
@@ -12,11 +14,10 @@
 #include <QVariant>
 #include <QVBoxLayout>
 
-#include "task.h"
-
 class TaskCreatorDialog : public QDialog
 {
     Q_OBJECT
+
 public:
     TaskCreatorDialog(QWidget* parent=nullptr, Task task = Task());
 
@@ -33,11 +34,14 @@ private:
     Task default_task;
 
     QCalendarWidget* calendar_widget;
+
     QLabel *task_name_label;
-    QLineEdit* task_name_edit;
     QLabel *task_description_label;
-    QLineEdit* task_description_edit;
     QLabel *task_state_label;
+
+    QLineEdit* task_name_edit;   
+    QLineEdit* task_description_edit;
+
     QComboBox* task_state_edit;
 
     QPushButton* ok_button;

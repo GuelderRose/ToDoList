@@ -1,6 +1,11 @@
 #ifndef MAINWIDGET_H
 #define MAINWIDGET_H
 
+#include "taskcreatordialog.h"
+#include "tasklist.h"
+#include "taskwidget.h"
+#include "task.h"
+
 #include <QDateEdit>
 #include <QFile>
 #include <QFileInfo>
@@ -15,11 +20,6 @@
 #include <QVector>
 #include <QWidget>
 
-#include "taskcreatordialog.h"
-#include "tasklist.h"
-#include "taskwidget.h"
-#include "task.h"
-
 class MainWidget : public QWidget
 {
     Q_OBJECT
@@ -32,8 +32,7 @@ private slots:
     void onAddTaskButtonClicked();
     void onDeleteWidgetButtonClicked(TaskWidget* task_widget);
     void onEditWidgetButtonClicked(TaskWidget *task_widget);
-    void onCheckBoxClicked(TaskWidget *task_widget);
-    void redrawView();
+    void onCheckBoxClicked(TaskWidget* task_widget);
 
     void resetFilters();
     void resetDateFilter();
@@ -41,18 +40,22 @@ private slots:
     void resetNameFilter();
     void resetDescriptionFilter();
 
+    void redrawView();
+
 private:
     void saveTasks();
-    void addTask(Task*);
-    void removeTask(TaskWidget* task);
+    TaskList loadTasks();
+
+    Task* getCorrespondingTask(TaskWidget *task_widget);
+
     void updateTaskWidgetList();
     void initTaskWidgetList(TaskList& tasks);
     void drawNewTaskWidget(Task* task, TaskWidget* task_widget);
     void updateFiltredTaskList();
+
     void closeEvent(QCloseEvent *event) override;
-    Task *getCorrespondingTask(TaskWidget *task_widget);
+
     std::pair<QDate, QDate> getDefaultDatesForFilterWidget();
-    TaskList loadTasks();
 
     QLabel *filter_label;
     QLabel *state_filter_label;
@@ -66,6 +69,8 @@ private:
     QDateEdit *right_date_edit;
 
     QPixmap reset_filters_icon;
+    QPixmap reset_one_filter_icon;
+
     QComboBox *task_state_filter;    
 
     QPushButton *reset_all_filters_button;
@@ -73,8 +78,6 @@ private:
     QPushButton *reset_filter_by_date_button;
     QPushButton *reset_filter_by_name_button;
     QPushButton *reset_filter_by_desc_button;
-    QPixmap reset_one_filter_icon;
-
     QPushButton *add_task_button;
 
     TaskList full_task_list;

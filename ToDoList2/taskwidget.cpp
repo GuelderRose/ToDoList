@@ -8,11 +8,11 @@ TaskWidget::TaskWidget(QWidget *parent)
 
 TaskWidget::TaskWidget(const Task *task, QWidget *parent): QWidget{parent}
 {
-    h_box = new QHBoxLayout(this);
+    QHBoxLayout *h_box = new QHBoxLayout(this);
 
     // Adding options menu
 
-    v_option_box = new QVBoxLayout();
+    QVBoxLayout *v_option_box = new QVBoxLayout();
     v_option_box->setSpacing(10);
 
     check_box = new QCheckBox(this);
@@ -39,7 +39,7 @@ TaskWidget::TaskWidget(const Task *task, QWidget *parent): QWidget{parent}
 
     // Adding task texts and date
 
-    v_label_box = new QVBoxLayout();
+    QVBoxLayout *v_label_box = new QVBoxLayout();
 
     task_name=new QLabel(this);
     task_name->setText(task->getTaskName());

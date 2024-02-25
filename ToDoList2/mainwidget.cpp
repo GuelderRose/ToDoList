@@ -10,8 +10,7 @@ MainWidget::MainWidget(QWidget *parent)
     QVBoxLayout *v_box = new QVBoxLayout(this);
 
     filter_label=new QLabel(this);
-    filter_label->setText("Filters:");
-
+    filter_label->setText("   Filters:");
 
     // Adding filters
 
@@ -139,16 +138,13 @@ MainWidget::MainWidget(QWidget *parent)
     search_by_desc_line->setMaximumWidth(180);
     v_desc_box->addWidget(search_by_desc_line);
 
-
     h_name_desc_box->addLayout(v_name_box);
     h_name_desc_box->addLayout(v_desc_box);
-
 
     QVBoxLayout *v_filter_box = new QVBoxLayout();
     v_filter_box->addLayout(h_state_date_box);
     v_filter_box->addLayout(h_name_desc_box);
     v_filter_box->setAlignment(Qt::AlignLeft);
-
 
     // ----- Adding reset all filters button
 
@@ -175,10 +171,12 @@ MainWidget::MainWidget(QWidget *parent)
     add_task_button->setMinimumSize(QSize(300,50));
 
     v_box->addWidget(filter_label);
-    //v_box->addLayout(h_filter_box);
     v_box->addWidget(filter_frame);
     v_box->addWidget(task_widget_list);
     v_box->addWidget(add_task_button);
+    v_box->setAlignment(Qt::AlignLeft);
+
+
 
     setLayout(v_box);
 
@@ -190,24 +188,75 @@ MainWidget::MainWidget(QWidget *parent)
     connect(right_date_edit, &QDateEdit::dateChanged, this, &MainWidget::redrawView);
     connect(reset_all_filters_button, &QPushButton::clicked, this, &MainWidget::resetFilters);
 
-
     redrawView();
 }
 
 MainWidget::~MainWidget() {}
 
-std::pair<QDate, QDate> MainWidget::getDefaultDatesForFilterWidget()
+void MainWidget::onAddTaskButtonClicked()
 {
-    std::pair<QDate, QDate> res = {full_task_list.getMinDate(), full_task_list.getMaxDate()};
-    if(res.first.isValid())
-        return res;
-    return {QDate::currentDate(), QDate::currentDate()};
+    Task* new_task = new Task();
+    QVariant updated_task = TaskCreatorDialog::getTask(*new_task, this);
+
+    if (updated_task.isValid())
+    {
+        *new_task = updated_task.value<Task>();
+        full_task_list.addTask(new_task);
+        resetDateFilter();
+        redrawView();
+    }
+    else
+        delete new_task;
 }
 
-void MainWidget::redrawView()
+void MainWidget::onDeleteWidgetButtonClicked(TaskWidget *task_widget)
 {
-    updateFiltredTaskList();
-    initTaskWidgetList(showed_task_list);
+    Task* task = getCorrespondingTask(task_widget);
+    full_task_list.deleteTask(task);
+    redrawView();
+}
+
+void MainWidget::onEditWidgetButtonClicked(TaskWidget *task_widget)
+{
+    Task* task = getCorrespondingTask(task_widget);
+    QVariant updated_task = TaskCreatorDialog::getTask(*task, this);
+
+    if (updated_task.isValid())
+    {
+        *task = updated_task.value<Task>();
+        task->convertToJson();
+        task_widget->updateView(task);
+        redrawView();
+    }
+}
+
+void MainWidget::onCheckBoxClicked(TaskWidget *task_widget)
+{
+    Task* task = getCorrespondingTask(task_widget);
+    if (task->getState()==State::Done)
+        task->setState(State::InProgress);
+    else
+        task->setState(State::Done);
+
+    redrawView();
+}
+
+void MainWidget::resetFilters()
+{
+    task_state_filter->setCurrentIndex(0);
+
+    auto dates = getDefaultDatesForFilterWidget();
+    left_date_edit->blockSignals(true);
+    right_date_edit->blockSignals(true);
+    left_date_edit->setDate(dates.first);
+    right_date_edit->setDate(dates.second);
+    left_date_edit->blockSignals(false);
+    right_date_edit->blockSignals(false);
+
+    search_by_name_line->clear();
+    search_by_desc_line->clear();
+
+    redrawView();
 }
 
 void MainWidget::resetDateFilter()
@@ -233,38 +282,26 @@ void MainWidget::resetNameFilter()
     search_by_name_line->clear();
     redrawView();
 }
+
 void MainWidget::resetDescriptionFilter()
 {
     search_by_desc_line->clear();
     redrawView();
 }
 
-
-void MainWidget::resetFilters()
+void MainWidget::redrawView()
 {
-    task_state_filter->setCurrentIndex(0);
-
-    auto dates = getDefaultDatesForFilterWidget();
-    left_date_edit->blockSignals(true);
-    right_date_edit->blockSignals(true);
-    left_date_edit->setDate(dates.first);
-    right_date_edit->setDate(dates.second);
-    left_date_edit->blockSignals(false);
-    right_date_edit->blockSignals(false);
-
-    search_by_name_line->clear();
-    search_by_desc_line->clear();
-
-    redrawView();
+    updateFiltredTaskList();
+    initTaskWidgetList(showed_task_list);
 }
 
 void MainWidget::saveTasks()
 {
-    QJsonArray tasksJson = full_task_list.convertToJson();
-    QJsonDocument doc(tasksJson);
-    QFile jsonFile(TASKS_JSON_PATH);
-    jsonFile.open(QFile::WriteOnly);
-    jsonFile.write(doc.toJson());
+    QJsonArray tasks_json = full_task_list.convertToJson();
+    QJsonDocument doc(tasks_json);
+    QFile json_file(TASKS_JSON_PATH);
+    json_file.open(QFile::WriteOnly);
+    json_file.write(doc.toJson());
 }
 
 TaskList MainWidget::loadTasks()
@@ -281,24 +318,6 @@ TaskList MainWidget::loadTasks()
     return TaskList();
 }
 
-void MainWidget::closeEvent(QCloseEvent *event)
-{
-    saveTasks();
-    QWidget::closeEvent(event);
-}
-
-void MainWidget::updateFiltredTaskList()
-{
-    showed_task_list = full_task_list;
-    showed_task_list = showed_task_list.filterByName(search_by_name_line->text());
-    showed_task_list = showed_task_list.filterByDescription(search_by_desc_line->text());
-    showed_task_list = showed_task_list.filterFromDate(left_date_edit->date());
-    showed_task_list = showed_task_list.filterToDate(right_date_edit->date());
-
-    if(task_state_filter->currentText() != "All")
-        showed_task_list = showed_task_list.filterByState(State(task_state_filter->currentIndex()));
-}
-
 Task* MainWidget::getCorrespondingTask(TaskWidget * task_widget)
 {
     for(int i = 0; i < showed_tasks.size();i++)
@@ -306,53 +325,6 @@ Task* MainWidget::getCorrespondingTask(TaskWidget * task_widget)
             return showed_tasks[i].second;
 
     return nullptr;
-}
-
-void MainWidget::onAddTaskButtonClicked()
-{
-    Task* new_task = new Task();
-    QVariant updated_task = TaskCreatorDialog::getTask(*new_task, this);
-
-    if (updated_task.isValid())
-    {
-        *new_task = updated_task.value<Task>();
-        full_task_list.addTask(new_task);
-        new_task->convertToJson();
-        resetDateFilter();
-        //resetFilters();
-        redrawView();
-    }
-    else
-        delete new_task;
-}
-
-void MainWidget::onDeleteWidgetButtonClicked(TaskWidget *task_widget)
-{
-    Task* task = getCorrespondingTask(task_widget);
-    full_task_list.deleteTask(task);
-    redrawView();
-}
-
-void MainWidget::onCheckBoxClicked(TaskWidget *task_widget)
-{
-    Task* task = getCorrespondingTask(task_widget);
-    task->changeState();
-    //resetFilters();
-    redrawView();
-}
-
-void MainWidget::onEditWidgetButtonClicked(TaskWidget *task_widget)
-{
-    Task* task = getCorrespondingTask(task_widget);
-    QVariant updated_task = TaskCreatorDialog::getTask(*task, this);
-
-    if (updated_task.isValid())
-    {
-        *task = updated_task.value<Task>();
-        task->convertToJson();
-        task_widget->updateView(task);
-        redrawView();
-    }
 }
 
 void MainWidget::updateTaskWidgetList() // Redraw all tasks from current existing tasks
@@ -368,7 +340,7 @@ void MainWidget::updateTaskWidgetList() // Redraw all tasks from current existin
     showed_tasks = std::move(new_view);
 }
 
-void MainWidget::initTaskWidgetList(TaskList& tasks) //Draw the whole list of tasks from TaskList. Use for filtred/loaded view
+void MainWidget::initTaskWidgetList(TaskList& tasks) //Drawing the whole list of tasks from TaskList. Use for filtred/loaded view
 {
     task_widget_list->clear();
     showed_tasks.clear();
@@ -380,7 +352,6 @@ void MainWidget::initTaskWidgetList(TaskList& tasks) //Draw the whole list of ta
         showed_tasks.emplace_back(new_task_widget, task);
     }
 }
-
 
 void MainWidget::drawNewTaskWidget(Task *task, TaskWidget *task_widget)
 {
@@ -395,3 +366,28 @@ void MainWidget::drawNewTaskWidget(Task *task, TaskWidget *task_widget)
     connect(task_widget, &TaskWidget::taskChanged, this, &MainWidget::onCheckBoxClicked);
 }
 
+void MainWidget::updateFiltredTaskList()
+{
+    showed_task_list = full_task_list;
+    showed_task_list = showed_task_list.filterByName(search_by_name_line->text());
+    showed_task_list = showed_task_list.filterByDescription(search_by_desc_line->text());
+    showed_task_list = showed_task_list.filterFromDate(left_date_edit->date());
+    showed_task_list = showed_task_list.filterToDate(right_date_edit->date());
+
+    if(task_state_filter->currentText() != "All")
+        showed_task_list = showed_task_list.filterByState(State(task_state_filter->currentIndex()));
+}
+
+void MainWidget::closeEvent(QCloseEvent *event)
+{
+    saveTasks();
+    QWidget::closeEvent(event);
+}
+
+std::pair<QDate, QDate> MainWidget::getDefaultDatesForFilterWidget()
+{
+    std::pair<QDate, QDate> res = {full_task_list.getMinDate(), full_task_list.getMaxDate()};
+    if(res.first.isValid())
+        return res;
+    return {QDate::currentDate(), QDate::currentDate()};
+}

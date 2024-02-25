@@ -4,6 +4,30 @@ TaskList::TaskList()
 {
 }
 
+QDate TaskList::getMinDate() const
+{
+    QDate minDate = QDate();
+    for(auto* task: tasks){
+        if(task->getDate().isValid()){
+            if (minDate.isNull() || task->getDate() < minDate)
+                minDate = task->getDate();
+        }
+    }
+    return minDate;
+}
+
+QDate TaskList::getMaxDate() const
+{
+    QDate maxDate = QDate();
+    for(auto* task: tasks){
+        if(task->getDate().isValid()){
+            if (maxDate.isNull() || task->getDate() > maxDate)
+                maxDate = task->getDate();
+        }
+    }
+    return maxDate;
+}
+
 void TaskList::addTask(Task* new_task)
 {
     tasks.push_back(new_task);
@@ -94,30 +118,6 @@ TaskList TaskList::createFromJson(QJsonArray json)
             return TaskList();
     }
     return result;
-}
-
-QDate TaskList::getMinDate() const
-{
-    QDate minDate = QDate();
-    for(auto* task: tasks){
-        if(task->getDate().isValid()){
-            if (minDate.isNull() || task->getDate() < minDate)
-                minDate = task->getDate();
-        }
-    }
-    return minDate;
-}
-
-QDate TaskList::getMaxDate() const
-{
-    QDate maxDate = QDate();
-    for(auto* task: tasks){
-        if(task->getDate().isValid()){
-            if (maxDate.isNull() || task->getDate() > maxDate)
-                maxDate = task->getDate();
-        }
-    }
-    return maxDate;
 }
 
 QVector<Task*>::iterator begin(TaskList &x){return x.tasks.begin();}
