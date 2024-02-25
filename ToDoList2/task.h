@@ -22,7 +22,7 @@ public:
     Task(QString task_name, QDate date, QString description);
     Task(QString task_name, QString description);
     const QString& getTaskName() const;
-    const QDate& getDate() const; //maybe return string instead?
+    const QDate& getDate() const;
     const QString& getDescription() const;
     State getState() const;
     void setTaskName(const QString& task_name);
